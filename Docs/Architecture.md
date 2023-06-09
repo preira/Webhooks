@@ -88,6 +88,49 @@ Consumer A-->>-Queue A: Ack
 Note over Queue A: Message is acked
 ```
 
+## New Destination flow
+```mermaid
+sequenceDiagram
+autonumber
+
+Client->>+Webhook API: POST /webhook call
+
+Webhook API->>AMQ: Query for Queue A
+AMQ-->>Webhook API: Queue A doesn't exist
+
+Webhook API->>AMQ: Create Queue A
+AMQ-->>Webhook API: Queue A created
+
+Webhook API->>+AMQ: Publish
+AMQ-->>-Webhook API: Ack
+
+Webhook API-->>-Client: 202 Accepted
+Note over Client: The event was published
+
+Webhook API-->>Manager: Create Consumer A
+Manager-->>Consumer A: Create Consumer A
+Manager->>Manager: Register Consumer A with TTL
+Consumer A-->>AMQ: Register listener for Queue A
+
+AMQ->>Consumer A: Message
+```
+
+## Manager flow
+```mermaid
+sequenceDiagram
+autonumber
+
+Manager->>+Manager: Start
+Manager->>Consumers: GET /lastCommunication
+Consumers-->>Manager: {"lastComm":"YYYY-MM-DDTHH24:MI:SS"} 200 OK
+alt current time - lastComm < TTL
+    Manager->>Manager: Log and stop
+else current time - lastComm > TTL
+    Manager->>Consumers: DELETE /Consumer%20A
+    Consumers-->>Manager: 200 OK
+end
+```
+
 ## Fail to send to AMQ
 If the AMQ server doesn't respond, the producer will retry to send the message to the AMQ server. If the AMQ server doesn't respond after a number of retries, the producer will fail the call. The client should retry the call.
 
