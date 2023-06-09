@@ -27,6 +27,12 @@ The system will follow the at least once delivery pattern.
 
 # The solution
 ## Big blocks
+The solution is composed of 4 big blocks:
+- Producer API
+- AMQ Server
+- Consumer
+- Manager
+
 ```mermaid	
 graph LR
 A[Producer] --> B[(AMQ)]
@@ -38,6 +44,10 @@ E -.delete q.-> B
 E -.new consumer.-> C
 E -.delete consumer.-> C
 ```
+The Consumer is composed of 2 parts:
+- Consumer
+- API Caller
+As detailed bellow.
 ## AMQ detail
 ```mermaid
 graph LR
@@ -89,6 +99,8 @@ Note over Queue A: Message is acked
 ```
 
 ## New Destination flow
+If a destination is new, the producer will create a new queue before publishing the message. After replying to the client, the producer will notify the Manager to create a new consumer. The manager will create a new consumer and register it with the AMQ. The consumer will start listening for messages.  
+
 ```mermaid
 sequenceDiagram
 autonumber
@@ -116,6 +128,7 @@ AMQ->>Consumer A: Message
 ```
 
 ## Manager flow
+The manager relies on a scheduler to check the TTL of the consumers. If the TTL is reached, the manager will delete the consumer and the queue.  
 ```mermaid
 sequenceDiagram
 autonumber
@@ -147,7 +160,7 @@ note over Direct: no response
 
 note over Webhook API: Too many retries. Failing.
 Webhook API-->>-Client: 503 Unavailable
-Note over Client: The event was not published and the client should retry
+Note over Client: The event was not published <br/>and the client should retry
 
 ```
 
